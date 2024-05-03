@@ -26,7 +26,20 @@ class HelloWorld(AbstractLambda):
                 )
             }
             return res
-        return 200
+        else:
+            res = {
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "statusCode": 400,
+                "body": json.dumps(
+                    {
+                        "statusCode": 400,
+                        "message": 'Bad request syntax or unsupported method. Request path: /cmtr-d7243a10. HTTP method: GET'
+                    }
+                )
+            }
+            return res
 
 
 HANDLER = HelloWorld()
