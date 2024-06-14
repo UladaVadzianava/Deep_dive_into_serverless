@@ -7,7 +7,7 @@
   "runtime": "python3.10",
   "memory": 128,
   "timeout": 100,
-  "lambda_path": "lambdas\\sqs_handler",
+  "lambda_path": "lambdas/sqs_handler",
   "dependencies": [
       {
         "resource_name": "async_queue",
