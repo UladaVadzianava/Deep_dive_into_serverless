@@ -1,5 +1,4 @@
 import json
-import os
 import uuid
 import boto3
 from decimal import Decimal
