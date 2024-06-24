@@ -6,10 +6,10 @@ import boto3
 from commons.log_helper import get_logger
 from commons.abstract_lambda import AbstractLambda
 
-dynamodb = boto3.resource('dynamodb')
-reservations_table_name = os.environ['RESERVATIONS_TABLE']
-tables_table_name = os.environ['TABLES_TABLE']
-user_pool_name = os.environ['USER_POOL']
+dynamodb = boto3.resource('dynamodb', region_name='eu-central-1')
+reservations_table_name = 'cmtr-d7243a10-Reservations-test'
+tables_table_name = 'cmtr-d7243a10-Tables-test'
+user_pool_name = 'cmtr-d7243a10-simple-booking-userpool-test'
 
 _LOG = get_logger('ApiHandler-handler')
 
