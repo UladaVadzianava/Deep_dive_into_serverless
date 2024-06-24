@@ -11,7 +11,7 @@ from commons.abstract_lambda import AbstractLambda
 
 _LOG = get_logger('Processor-handler')
 
-dynamodb = boto3.resource('dynamodb')
+dynamodb = boto3.client('dynamodb')
 table_name = 'cmtr-d7243a10-Weather-test'
 
 
