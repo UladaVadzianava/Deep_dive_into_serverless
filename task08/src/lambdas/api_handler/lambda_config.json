@@ -7,13 +7,16 @@
   "runtime": "python3.10",
   "memory": 128,
   "timeout": 100,
-  "lambda_path": "lambdas\\api_handler",
+  "lambda_path": "lambdas/api_handler",
   "dependencies": [],
   "event_sources": [],
   "env_variables": {},
-  "publish_version": true,
-  "alias": "${lambdas_alias_name}",
-  "url_config": {},
+  "publish_version": false,
+  "url_config": {
+    "auth_type": "NONE"
+  },
   "ephemeral_storage": 512,
-  "logs_expiration": "${logs_expiration}"
+  "logs_expiration":
+  "${logs_expiration}",
+  "layers": ["weather"]
 }
