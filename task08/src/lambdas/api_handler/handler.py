@@ -1,7 +1,7 @@
+import requests
 from commons.log_helper import get_logger
 from commons.abstract_lambda import AbstractLambda
 
-from task08.src.lambdas.layers.weather.weather import Weather
 
 _LOG = get_logger('ApiHandler-handler')
 
@@ -13,7 +13,8 @@ class ApiHandler(AbstractLambda):
         
     def handle_request(self, event, context):
 
-        weather = Weather.get_weather
+        weather = requests.get(
+            "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m")
 
         return {
                     "headers": {
