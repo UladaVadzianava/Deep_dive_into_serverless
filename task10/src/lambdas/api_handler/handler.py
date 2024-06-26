@@ -7,9 +7,11 @@ from commons.log_helper import get_logger
 from commons.abstract_lambda import AbstractLambda
 
 dynamodb = boto3.resource('dynamodb', region_name='eu-central-1')
+client = boto3.client('cognito-idp')
 reservations_table_name = 'cmtr-d7243a10-Reservations-test'
 tables_table_name = 'cmtr-d7243a10-Tables-test'
 user_pool_name = 'cmtr-d7243a10-simple-booking-userpool-test'
+CLIENT_APP = 'client_app'
 
 _LOG = get_logger('ApiHandler-handler')
 
@@ -18,7 +20,98 @@ class ApiHandler(AbstractLambda):
 
     def validate_request(self, event) -> dict:
         pass
-        
+
+    def signup(self, event):
+        body = json.loads(event['body'])
+
+        first_name = body['firstName']
+        last_name = body['lastName']
+        email = body['email']
+        password = body['password']
+
+        response = client.list_user_pools(MaxResults=60)
+        user_pool_id = None
+        for user_pool in response['UserPools']:
+            if user_pool['Name'] == user_pool_name:
+                user_pool_id = user_pool['Id']
+                break
+
+        app_client_id = None
+        response = client.list_user_pool_clients(UserPoolId=user_pool_id)
+
+        for app_client in response['UserPoolClients']:
+            if app_client['ClientName'] == CLIENT_APP:
+                app_client_id = app_client['ClientId']
+        _LOG.info(f'{app_client_id =}')
+
+        response = client.admin_create_user(
+            UserPoolId=user_pool_id,
+            Username=email,
+            UserAttributes=[
+                {
+                    'Name': 'email',
+                    'Value': email
+                },
+                {
+                    'Name': 'given_name',
+                    'Value': first_name
+                },
+                {
+                    'Name': 'family_name',
+                    'Value': last_name
+                },
+            ],
+            TemporaryPassword=password,
+            MessageAction='SUPPRESS'
+        )
+        _LOG.info(f'{response=}')
+
+        response = client.admin_set_user_password(
+            UserPoolId=user_pool_id,
+            Username=email,
+            Password=password,
+            Permanent=True
+        )
+
+    def signin(self, event):
+        body = json.loads(event['body'])
+
+        email = body['email']
+        password = body['password']
+
+        response = client.list_user_pools(MaxResults=60)
+
+        user_pool_id = None
+        for user_pool in response['UserPools']:
+            if user_pool['Name'] == user_pool_name:
+                user_pool_id = user_pool['Id']
+                break
+
+        response = client.list_user_pool_clients(
+            UserPoolId=user_pool_id,
+            MaxResults=10
+        )
+
+        app_client_id = None
+        for app_client in response['UserPoolClients']:
+            if app_client['ClientName'] == CLIENT_APP:
+                app_client_id = app_client['ClientId']
+
+        response = client.initiate_auth(
+            ClientId=app_client_id,
+            AuthFlow='USER_PASSWORD_AUTH',
+            AuthParameters={
+                'USERNAME': email,
+                'PASSWORD': password
+            }
+        )
+        _LOG.info(f'{response=}')
+        id_token = response['AuthenticationResult']['IdToken']
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'accessToken': id_token})
+        }
+
     def handle_request(self, event, context):
         """
         Explain incoming event here
@@ -31,9 +124,11 @@ class ApiHandler(AbstractLambda):
         try:
             if event['path'] == '/signup' and event['httpMethod'] == 'POST':
                 _LOG.info("signup post")
+                self.signup(event)
 
             elif event['path'] == '/signin' and event['httpMethod'] == 'POST':
                 _LOG.info("signip post")
+                self.signin(event)
 
             elif event['path'] == '/tables' and event['httpMethod'] == 'POST':
                 _LOG.info("tables post")
