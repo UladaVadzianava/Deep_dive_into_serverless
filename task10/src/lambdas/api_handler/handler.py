@@ -21,9 +21,7 @@ class ApiHandler(AbstractLambda):
     def validate_request(self, event) -> dict:
         pass
 
-    def signup(self, event):
-        body = json.loads(event['body'])
-
+    def signup(self, body):
         first_name = body['firstName']
         last_name = body['lastName']
         email = body['email']
@@ -35,6 +33,7 @@ class ApiHandler(AbstractLambda):
             if user_pool['Name'] == user_pool_name:
                 user_pool_id = user_pool['Id']
                 break
+        _LOG.info(f'{user_pool_id=}')
 
         app_client_id = None
         response = client.list_user_pool_clients(UserPoolId=user_pool_id)
@@ -72,6 +71,7 @@ class ApiHandler(AbstractLambda):
             Password=password,
             Permanent=True
         )
+        _LOG.info(f'{response=}')
 
     def signin(self, event):
         body = json.loads(event['body'])
@@ -124,7 +124,8 @@ class ApiHandler(AbstractLambda):
         try:
             if event['path'] == '/signup' and event['httpMethod'] == 'POST':
                 _LOG.info("signup post")
-                self.signup(event)
+                body = json.loads(event['body'])
+                self.signup(body)
 
             elif event['path'] == '/signin' and event['httpMethod'] == 'POST':
                 _LOG.info("signip post")
