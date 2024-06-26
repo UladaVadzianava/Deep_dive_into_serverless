@@ -15,7 +15,12 @@
             "dynamodb:Scan",
             "ssm:PutParameter",
             "ssm:GetParameter",
-            "kms:Decrypt"
+            "kms:Decrypt",
+            "cognito-idp:*",
+            "cognito-idp:ListUserPools",
+            "cognito-idp:AdminCreateUser",
+            "cognito-idp:ListUserPoolClients",
+            "cognito-idp:AdminSetUserPassword"
           ],
           "Effect": "Allow",
           "Resource": "*"
@@ -81,7 +86,7 @@
       "/tables": {
         "enable_cors": false,
         "POST": {
-          "authorization_type": "NONE",
+          "authorization_type": "task10-authorizer",
           "integration_type": "lambda",
           "lambda_name": "api_handler",
           "enable_proxy": true,
@@ -93,7 +98,22 @@
           "default_error_pattern": true
         },
         "GET": {
-          "authorization_type": "NONE",
+          "authorization_type": "task10-authorizer",
+          "integration_type": "lambda",
+          "lambda_name": "api_handler",
+          "enable_proxy": true,
+          "api_key_required": false,
+          "method_request_parameters": {},
+          "integration_request_body_template": {},
+          "responses": [],
+          "integration_responses": [],
+          "default_error_pattern": true
+        }
+      },
+      "/tables/{tableId}": {
+        "enable_cors": false,
+        "GET": {
+          "authorization_type": "task10-authorizer",
           "integration_type": "lambda",
           "lambda_name": "api_handler",
           "enable_proxy": true,
@@ -108,7 +128,7 @@
       "/reservations": {
         "enable_cors": false,
         "POST": {
-          "authorization_type": "NONE",
+          "authorization_type": "task10-authorizer",
           "integration_type": "lambda",
           "lambda_name": "api_handler",
           "enable_proxy": true,
@@ -120,7 +140,22 @@
           "default_error_pattern": true
         },
         "GET": {
-          "authorization_type": "NONE",
+          "authorization_type": "task10-authorizer",
+          "integration_type": "lambda",
+          "lambda_name": "api_handler",
+          "enable_proxy": true,
+          "api_key_required": false,
+          "method_request_parameters": {},
+          "integration_request_body_template": {},
+          "responses": [],
+          "integration_responses": [],
+          "default_error_pattern": true
+        }
+      },
+      "/test": {
+        "enable_cors": false,
+        "GET": {
+          "authorization_type": "task10-authorizer",
           "integration_type": "lambda",
           "lambda_name": "api_handler",
           "enable_proxy": true,
@@ -157,6 +192,16 @@
     "sms_configuration": {},
     "username_attributes": [],
     "custom_attributes": [],
-    "client": {}
+    "client": {
+      "client_name": "client_app",
+      "generate_secret": false,
+      "explicit_auth_flows": [
+        "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+        "ALLOW_CUSTOM_AUTH",
+        "ALLOW_USER_SRP_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH",
+        "ALLOW_USER_PASSWORD_AUTH"
+      ]
+    }
   }
 }
