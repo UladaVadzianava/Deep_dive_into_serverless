@@ -1,5 +1,7 @@
 import json
 import os
+from datetime import datetime
+from decimal import Decimal
 from uuid import uuid4
 
 import boto3
@@ -20,6 +22,19 @@ class ApiHandler(AbstractLambda):
 
     def validate_request(self, event) -> dict:
         pass
+
+    def decimal_serializer(obj):
+        if isinstance(obj, Decimal):
+            return int(obj)
+        raise TypeError("Type not serializable")
+
+    def check_table_existence(tables_table, table_number):
+        response = tables_table.scan()
+        tables = response['Items']
+        for table in tables:
+            if table["number"] == table_number:
+                return
+        raise KeyError("Not existing table")
 
     def signup(self, body):
         first_name = body['firstName']
@@ -145,17 +160,46 @@ class ApiHandler(AbstractLambda):
                 response = tables_table.scan()
                 items = response['Items']
 
-                return {"statusCode": 200, "body": json.dumps(items)}
+                items = sorted(items, key=lambda item: item['id'])
+                tables = {'tables': sorted(items, key=lambda item: item['id'])}
+
+                body = json.dumps(tables, default=self.decimal_serializer)
+
+                return {"statusCode": 200, "body": body}
 
             elif event['resource'] == '/tables/{tableId}' and event['httpMethod'] == 'GET':
                 table_id = int(event['path'].split('/')[-1])
-                _LOG.info(f"{table_id=}")
+
+                item = tables_table.get_item(Key={'id': int(table_id)})
+                body = json.dumps(item["Item"], default=self.decimal_serializer)
+
+                return {"statusCode": 200, "body": body}
 
             elif event['path'] == '/reservations' and event['httpMethod'] == 'POST':
-                _LOG.info("reservations post")
-
                 item = json.loads(event['body'])
-                reservation_id = uuid4()
+                proposed_table_number = item["tableNumber"]
+                try:
+                    self.check_table_existence(tables_table, proposed_table_number)
+                except KeyError:
+                    return {"statusCode": 400, "body": json.dumps({"error": "table does not exist"})}
+
+                proposed_slot_time_start = datetime.strptime(item["slotTimeStart"], "%H:%M").time()
+                proposed_slot_time_end = datetime.strptime(item["slotTimeEnd"], "%H:%M").time()
+                response = reservations_table.scan()
+
+                reservations = response['Items']
+                for r in reservations:
+                    if r["tableNumber"] != proposed_table_number:
+                        continue
+                    if r["date"] != item["date"]:
+                        continue
+                    existing_slot_time_start = datetime.strptime(r["slotTimeStart"], "%H:%M").time()
+                    existing_slot_time_end = datetime.strptime(r["slotTimeEnd"], "%H:%M").time()
+                    if any([existing_slot_time_start <= proposed_slot_time <= existing_slot_time_end
+                            for proposed_slot_time in (proposed_slot_time_start, proposed_slot_time_end)]):
+                        return {"statusCode": 400,
+                                "body": json.dumps({"error": "time slots are overlapping with existing reservations"})}
+                reservation_id = str(uuid4())
                 reservations_table.put_item(Item={"id": reservation_id, **item})
 
                 return {"statusCode": 200,
@@ -168,7 +212,12 @@ class ApiHandler(AbstractLambda):
                 response = reservations_table.scan()
                 items = response['Items']
 
-                return {"statusCode": 200, "body": json.dumps(items)}
+                for i in items:
+                    del i["id"]
+
+                items = sorted(items, key=lambda item: item['tableNumber'])
+                reservations = {"reservations": items}
+                return {"statusCode": 200, "body": json.dumps(reservations, default=self.decimal_serializer)}
 
             else:
                 raise KeyError("no method")
@@ -183,7 +232,7 @@ class ApiHandler(AbstractLambda):
             }
 
         return {"statusCode": 200, "event": event}
-    
+
 
 HANDLER = ApiHandler()
 
