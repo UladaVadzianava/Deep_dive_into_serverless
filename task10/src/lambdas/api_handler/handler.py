@@ -215,17 +215,23 @@ class ApiHandler(AbstractLambda):
 
             else:
                 raise KeyError("no method")
-        except Exception as ex:
-            return {
+
+        except Exception as e:
+            _LOG.info('Bad request')
+            _LOG.info(f'Error: {e}')
+
+            message = {
                 'statusCode': 400,
                 'body': json.dumps({
                     'statusCode': 400,
                     'error': 'Bad request',
-                    'message': f'{ex}'
+                    'message': f'{e}'
                 })
             }
 
-        return {"statusCode": 200, "event": event}
+            _LOG.info(f'{message=}')
+            return message
+        return {"statusCode": 200, "body": json.dumps(event)}
 
 
 HANDLER = ApiHandler()
