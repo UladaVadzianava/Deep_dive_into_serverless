@@ -53,55 +53,52 @@ class ApiHandler(AbstractLambda):
                 last_name = body['lastName']
                 email = body['email']
                 password = body['password']
-                try:
-                    response = client.list_user_pools(MaxResults=60)
-                    user_pool_id = None
-                    for user_pool in response['UserPools']:
-                        if user_pool['Name'] == user_pool_name:
-                            user_pool_id = user_pool['Id']
-                            break
-                    _LOG.info(f'{user_pool_id=}')
 
-                    app_client_id = None
-                    response = client.list_user_pool_clients(UserPoolId=user_pool_id)
+                response = client.list_user_pools(MaxResults=60)
+                user_pool_id = None
+                for user_pool in response['UserPools']:
+                    if user_pool['Name'] == user_pool_name:
+                        user_pool_id = user_pool['Id']
+                        break
+                _LOG.info(f'{user_pool_id=}')
 
-                    for app_client in response['UserPoolClients']:
-                        if app_client['ClientName'] == CLIENT_APP:
-                            app_client_id = app_client['ClientId']
-                    _LOG.info(f'{app_client_id =}')
+                app_client_id = None
+                response = client.list_user_pool_clients(UserPoolId=user_pool_id)
 
-                    response = client.admin_create_user(
-                        UserPoolId=user_pool_id,
-                        Username=email,
-                        UserAttributes=[
-                            {
-                                'Name': 'email',
-                                'Value': email
-                            },
-                            {
-                                'Name': 'given_name',
-                                'Value': first_name
-                            },
-                            {
-                                'Name': 'family_name',
-                                'Value': last_name
-                            },
-                        ],
-                        TemporaryPassword=password,
-                        MessageAction='SUPPRESS'
-                    )
-                    _LOG.info(f'{response=}')
+                for app_client in response['UserPoolClients']:
+                    if app_client['ClientName'] == CLIENT_APP:
+                        app_client_id = app_client['ClientId']
+                _LOG.info(f'{app_client_id =}')
 
-                    response = client.admin_set_user_password(
-                        UserPoolId=user_pool_id,
-                        Username=email,
-                        Password=password,
-                        Permanent=True
-                    )
-                    _LOG.info(f'{response=}')
-                    return {"statusCode": 200, "message": "OK"}
-                except Exception as ex:
-                    print(ex)
+                response = client.admin_create_user(
+                    UserPoolId=user_pool_id,
+                    Username=email,
+                    UserAttributes=[
+                        {
+                            'Name': 'email',
+                            'Value': email
+                        },
+                        {
+                            'Name': 'given_name',
+                            'Value': first_name
+                        },
+                        {
+                            'Name': 'family_name',
+                            'Value': last_name
+                        },
+                    ],
+                    TemporaryPassword=password,
+                    MessageAction='SUPPRESS'
+                )
+                _LOG.info(f'{response=}')
+
+                response = client.admin_set_user_password(
+                    UserPoolId=user_pool_id,
+                    Username=email,
+                    Password=password,
+                    Permanent=True
+                )
+                _LOG.info(f'{response=}')
 
             elif event['path'] == '/signin' and event['httpMethod'] == 'POST':
                 _LOG.info("signip post")
