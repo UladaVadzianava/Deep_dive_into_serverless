@@ -18,23 +18,25 @@ CLIENT_APP = 'client_app'
 _LOG = get_logger('ApiHandler-handler')
 
 
+def decimal_serializer(obj):
+    if isinstance(obj, Decimal):
+        return int(obj)
+    raise TypeError("Type not serializable")
+
+
+def check_table_existence(tables_table, table_number):
+    response = tables_table.scan()
+    tables = response['Items']
+    for table in tables:
+        if table["number"] == table_number:
+            return
+    raise KeyError("Not existing table")
+
+
 class ApiHandler(AbstractLambda):
 
     def validate_request(self, event) -> dict:
         pass
-
-    def decimal_serializer(obj):
-        if isinstance(obj, Decimal):
-            return int(obj)
-        raise TypeError("Type not serializable")
-
-    def check_table_existence(tables_table, table_number):
-        response = tables_table.scan()
-        tables = response['Items']
-        for table in tables:
-            if table["number"] == table_number:
-                return
-        raise KeyError("Not existing table")
 
     def handle_request(self, event, context):
         """
