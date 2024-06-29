@@ -9,7 +9,7 @@ from commons.log_helper import get_logger
 from commons.abstract_lambda import AbstractLambda
 
 dynamodb = boto3.resource('dynamodb', region_name='eu-central-1')
-client = boto3.client('cognito-idp')
+boto_client = boto3.client('cognito-idp')
 reservations_table_name = 'cmtr-d7243a10-Reservations-test'
 tables_table_name = 'cmtr-d7243a10-Tables-test'
 user_pool_name = 'cmtr-d7243a10-simple-booking-userpool-test'
@@ -56,7 +56,7 @@ class ApiHandler(AbstractLambda):
                 email = body['email']
                 password = body['password']
 
-                response = client.list_user_pools(MaxResults=60)
+                response = boto_client.list_user_pools(MaxResults=60)
                 user_pool_id = None
                 for user_pool in response['UserPools']:
                     if user_pool['Name'] == user_pool_name:
@@ -65,14 +65,15 @@ class ApiHandler(AbstractLambda):
                 _LOG.info(f'{user_pool_id=}')
 
                 app_client_id = None
-                response = client.list_user_pool_clients(UserPoolId=user_pool_id)
+                response = boto_client.list_user_pool_clients(UserPoolId=user_pool_id)
+                _LOG.info(f"{response=}")
 
                 for app_client in response['UserPoolClients']:
                     if app_client['ClientName'] == CLIENT_APP:
                         app_client_id = app_client['ClientId']
                 _LOG.info(f'{app_client_id =}')
 
-                response = client.admin_create_user(
+                response = boto_client.admin_create_user(
                     UserPoolId=user_pool_id,
                     Username=email,
                     UserAttributes=[
@@ -94,7 +95,7 @@ class ApiHandler(AbstractLambda):
                 )
                 _LOG.info(f'{response=}')
 
-                response = client.admin_set_user_password(
+                response = boto_client.admin_set_user_password(
                     UserPoolId=user_pool_id,
                     Username=email,
                     Password=password,
@@ -103,21 +104,22 @@ class ApiHandler(AbstractLambda):
                 _LOG.info(f'{response=}')
 
             elif event['path'] == '/signin' and event['httpMethod'] == 'POST':
-                _LOG.info("signip post")
                 body = json.loads(event['body'])
+                _LOG.info("signip post")
 
                 email = body['email']
                 password = body['password']
 
-                response = client.list_user_pools(MaxResults=60)
-
+                response = boto_client.list_user_pools(MaxResults=60)
+                _LOG.info(f'{response=}')
                 user_pool_id = None
                 for user_pool in response['UserPools']:
                     if user_pool['Name'] == user_pool_name:
                         user_pool_id = user_pool['Id']
                         break
+                _LOG.info(f'{user_pool_id=}')
 
-                response = client.list_user_pool_clients(
+                response = boto_client.list_user_pool_clients(
                     UserPoolId=user_pool_id,
                     MaxResults=10
                 )
@@ -127,7 +129,7 @@ class ApiHandler(AbstractLambda):
                     if app_client['ClientName'] == CLIENT_APP:
                         app_client_id = app_client['ClientId']
 
-                response = client.initiate_auth(
+                response = boto_client.initiate_auth(
                     ClientId=app_client_id,
                     AuthFlow='USER_PASSWORD_AUTH',
                     AuthParameters={
@@ -146,8 +148,8 @@ class ApiHandler(AbstractLambda):
                 _LOG.info("tables post")
 
                 item = json.loads(event['body'])
-                tables_table.put_item(Item=item)
-
+                response = tables_table.put_item(Item=item)
+                _LOG.info(response)
                 return {"statusCode": 200,
                         "body": json.dumps({"id": item["id"]})
                         }
@@ -155,11 +157,12 @@ class ApiHandler(AbstractLambda):
             elif event['path'] == '/tables' and event['httpMethod'] == 'GET':
                 response = tables_table.scan()
                 items = response['Items']
+                _LOG.info(items)
 
                 items = sorted(items, key=lambda item: item['id'])
                 tables = {'tables': sorted(items, key=lambda item: item['id'])}
 
-                body = json.dumps(tables, default=self.decimal_serializer)
+                body = json.dumps(tables, default=decimal_serializer)
 
                 return {"statusCode": 200, "body": body}
 
@@ -167,17 +170,19 @@ class ApiHandler(AbstractLambda):
                 table_id = int(event['path'].split('/')[-1])
 
                 item = tables_table.get_item(Key={'id': int(table_id)})
-                body = json.dumps(item["Item"], default=self.decimal_serializer)
-
+                body = json.dumps(item["Item"], default=decimal_serializer)
+                _LOG.info(f"{body=}")
                 return {"statusCode": 200, "body": body}
 
             elif event['path'] == '/reservations' and event['httpMethod'] == 'POST':
+                _LOG.info("reservations post")
                 item = json.loads(event['body'])
                 proposed_table_number = item["tableNumber"]
                 try:
-                    self.check_table_existence(tables_table, proposed_table_number)
+                    check_table_existence(tables_table, proposed_table_number)
                 except KeyError:
                     return {"statusCode": 400, "body": json.dumps({"error": "table does not exist"})}
+                _LOG.info(f"{proposed_table_number=}")
 
                 proposed_slot_time_start = datetime.strptime(item["slotTimeStart"], "%H:%M").time()
                 proposed_slot_time_end = datetime.strptime(item["slotTimeEnd"], "%H:%M").time()
@@ -196,8 +201,8 @@ class ApiHandler(AbstractLambda):
                         return {"statusCode": 400,
                                 "body": json.dumps({"error": "time slots are overlapping with existing reservations"})}
                 reservation_id = str(uuid4())
-                reservations_table.put_item(Item={"id": reservation_id, **item})
-
+                response = reservations_table.put_item(Item={"id": reservation_id, **item})
+                _LOG.info(response)
                 return {"statusCode": 200,
                         "body": json.dumps({"reservationId": reservation_id})
                         }
@@ -212,8 +217,10 @@ class ApiHandler(AbstractLambda):
                     del i["id"]
 
                 items = sorted(items, key=lambda item: item['tableNumber'])
+                _LOG.info(items)
                 reservations = {"reservations": items}
-                return {"statusCode": 200, "body": json.dumps(reservations, default=self.decimal_serializer)}
+                _LOG.info(reservations)
+                return {"statusCode": 200, "body": json.dumps(reservations, default=decimal_serializer)}
 
             else:
                 raise KeyError("no method")
