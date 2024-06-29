@@ -220,7 +220,12 @@ class ApiHandler(AbstractLambda):
                 _LOG.info(items)
                 reservations = {"reservations": items}
                 _LOG.info(reservations)
-                return {"statusCode": 200, "body": json.dumps(reservations, default=decimal_serializer)}
+                return {"statusCode": 200, "body": json.dumps(reservations, default=decimal_serializer),
+                        "headers":    {'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                                       'Access-Control-Allow-Origin': '*',
+                                       'Access-Control-Allow-Methods': '*',
+                                       'Accept-Version': '*'}
+                        }
 
             else:
                 raise KeyError("no method")
