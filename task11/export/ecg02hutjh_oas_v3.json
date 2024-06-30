@@ -2,11 +2,11 @@
   "openapi": "3.0.1",
   "info": {
     "title": "task11_api",
-    "version": "2024-05-26T11:22:34Z"
+    "version": "2024-06-28T11:22:34Z"
   },
   "servers": [
     {
-      "url": "https://ecg02hutjh.execute-api.eu-central-1.amazonaws.com/{basePath}",
+      "url": "https://oubfohhcsh.execute-api.eu-central-1.amazonaws.com/{basePath}",
       "variables": {
         "basePath": {
           "default": "api"
